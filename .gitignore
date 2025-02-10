@@ -3,4 +3,5 @@ data
 hymenoptera_data
 hymenoptera_data.zip
 mnist_data
-*.pth
+sample.pth
+test_data
