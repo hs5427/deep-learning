@@ -1,4 +1,5 @@
 from tqdm import tqdm
+import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
 from torch.nn import init
@@ -238,3 +239,82 @@ def lr_finder(model, train_loader, loss_func, lr_multiplier=1.2):
             break
 
     return lrs, losses
+
+# イメージとラベル表示
+def show_images_labels(loader, classes, net, device):
+
+    # データローダーから最初の1セットを取得する
+    for images, labels in loader:
+        break
+    # 表示数は50個とバッチサイズのうち小さい方
+    n_size = min(len(images), 50)
+
+    if net is not None:
+      # デバイスの割り当て
+      inputs = images.to(device)
+      labels = labels.to(device)
+
+      # 予測計算
+      outputs = net(inputs)
+      predicted = torch.max(outputs,1)[1]
+      #images = images.to('cpu')
+
+    # 最初のn_size個の表示
+    plt.figure(figsize=(20, 15))
+    for i in range(n_size):
+        ax = plt.subplot(5, 10, i + 1)
+        label_name = classes[labels[i]]
+        # netがNoneでない場合は、予測結果もタイトルに表示する
+        if net is not None:
+          predicted_name = classes[predicted[i]]
+          # 正解かどうかで色分けをする
+          if label_name == predicted_name:
+            c = 'k'
+          else:
+            c = 'b'
+          ax.set_title(label_name + ':' + predicted_name, c=c, fontsize=20)
+        # netがNoneの場合は、正解ラベルのみ表示
+        else:
+          ax.set_title(label_name, fontsize=20)
+        # TensorをNumPyに変換
+        image_np = images[i].numpy().copy()
+        # 軸の順番変更 (channel, row, column) -> (row, column, channel)
+        img = np.transpose(image_np, (1, 2, 0))
+        # 値の範囲を[-1, 1] -> [0, 1]に戻す
+        img = (img + 1)/2
+        # 結果表示
+        plt.imshow(img)
+        ax.set_axis_off()
+    plt.show()
+
+
+def show_dataloader(dataloader, classes):
+    # バッチから画像とラベルを取得
+    images, labels = next(iter(dataloader))  
+
+    plt.figure(figsize=(15, 8))
+    for i in range(min(10, len(images))):  # データセットが 10 未満なら全て表示
+        ax = plt.subplot(2, 5, i + 1)
+        
+        img = images[i].permute(1, 2, 0).numpy()  # (C, H, W) → (H, W, C)
+        img = (img * 0.5) + 0.5  # Normalize の逆変換（元の色に戻す）
+        
+        plt.imshow(img)
+        ax.set_title(f"{classes[labels[i].item()]}")
+        ax.axis("off")  # 軸を非表示
+
+    plt.show()
+
+def toHeatmap(x):
+    """
+    画像をヒートマップに変換する関数
+    input: x (np.array) 画像 <- 画像のサイズは224x224
+    output: x (np.array) ヒートマップ
+    """
+    # 0-1に正規化された画像を0-255に戻す
+    x = (x*255).reshape(-1)
+    # 0-255に戻した画像をカラーマップに変換
+    cm = plt.get_cmap('jet')
+    x = np.array([cm(int(np.round(xi)))[:3] for xi in x])
+    # 画像サイズに変換
+    return x.reshape(224,224,3)
